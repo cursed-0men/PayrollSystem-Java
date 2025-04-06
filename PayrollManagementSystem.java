@@ -3,16 +3,17 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
+import java.time.LocalDate;
 
 public class PayrollManagementSystem {
     private JFrame frame;
     private JPanel panel, headerPanel;
-    private JButton addEmployeeBtn, viewEmployeesBtn, calculateSalaryBtn, updateSalaryBtn, searchBtn, deleteBtn, clearBtn, exitBtn;
+    private JButton addEmployeeBtn, viewEmployeesBtn, calculateSalaryBtn, updateSalaryBtn, searchBtn, deleteBtn, clearBtn, exitBtn, attendanceBtn;
     private Connection conn;
 
     public PayrollManagementSystem() {
         frame = new JFrame("Payroll Management System");
-        frame.setSize(800, 600);
+        frame.setSize(800, 650);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
         frame.getContentPane().setBackground(new Color(25, 25, 35));
@@ -34,7 +35,7 @@ public class PayrollManagementSystem {
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel);
 
-        panel = new JPanel(new GridLayout(4, 2, 20, 20));
+        panel = new JPanel(new GridLayout(5, 2, 20, 20));
         panel.setBorder(BorderFactory.createEmptyBorder(40, 80, 40, 80));
         panel.setBackground(new Color(25, 25, 35));
 
@@ -46,6 +47,7 @@ public class PayrollManagementSystem {
         deleteBtn = createStyledButton("Delete Employee");
         clearBtn = createStyledButton("Clear All Fields");
         exitBtn = createStyledButton("Exit");
+        attendanceBtn = createStyledButton("Mark Attendance");
 
         addToolTip(addEmployeeBtn, "Add a new employee");
         addToolTip(viewEmployeesBtn, "View all employees");
@@ -55,6 +57,7 @@ public class PayrollManagementSystem {
         addToolTip(deleteBtn, "Delete employee by ID");
         addToolTip(clearBtn, "Clear inputs (not applicable)");
         addToolTip(exitBtn, "Exit application");
+        addToolTip(attendanceBtn, "Mark employee attendance");
 
         panel.add(addEmployeeBtn);
         panel.add(viewEmployeesBtn);
@@ -64,6 +67,7 @@ public class PayrollManagementSystem {
         panel.add(deleteBtn);
         panel.add(clearBtn);
         panel.add(exitBtn);
+        panel.add(attendanceBtn);
 
         frame.add(headerPanel, BorderLayout.NORTH);
         frame.add(panel, BorderLayout.CENTER);
@@ -77,6 +81,7 @@ public class PayrollManagementSystem {
         updateSalaryBtn.addActionListener(e -> updateSalary());
         searchBtn.addActionListener(e -> searchEmployee());
         deleteBtn.addActionListener(e -> deleteEmployee());
+        attendanceBtn.addActionListener(e -> markAttendance());
         clearBtn.addActionListener(e -> CustomDialog.showMessage(frame, "No input fields to clear."));
         exitBtn.addActionListener(e -> {
             int confirm = CustomDialog.showConfirm(frame, "Are you sure you want to exit?", "Exit Confirmation");
@@ -92,7 +97,6 @@ public class PayrollManagementSystem {
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 50), 2));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
         button.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
                 button.setBackground(new Color(0, 191, 255));
@@ -264,12 +268,40 @@ public class PayrollManagementSystem {
         }
     }
 
+    private void markAttendance() {
+        try {
+            int id = Integer.parseInt(CustomDialog.showInput(frame, "Enter Employee ID:"));
+            String[] options = {"Present", "Absent"};
+            int choice = JOptionPane.showOptionDialog(frame, "Mark Attendance:", "Attendance",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+
+            if (choice != -1) {
+                String status = options[choice];
+                LocalDate today = LocalDate.now();
+
+                PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO attendance (employee_id, date, status) VALUES (?, ?, ?)"
+                );
+                ps.setInt(1, id);
+                ps.setDate(2, Date.valueOf(today));
+                ps.setString(3, status);
+                ps.executeUpdate();
+
+                CustomDialog.showMessage(frame, "Attendance marked as " + status + " for " + today + ".");
+            }
+        } catch (Exception e) {
+            CustomDialog.showError(frame, "Error Marking Attendance\n" + e.getMessage());
+        }
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(PayrollManagementSystem::new);
     }
 }
 
-// Custom Dialog Class for consistent look
+// ---------------------------
+// Custom Dialog Class
+// ---------------------------
 class CustomDialog {
     static Color bgColor = new Color(30, 30, 50);
     static Color fgColor = Color.WHITE;
@@ -278,7 +310,6 @@ class CustomDialog {
         UIManager.put("OptionPane.background", bgColor);
         UIManager.put("Panel.background", bgColor);
         UIManager.put("OptionPane.messageForeground", fgColor);
-        UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 14));
         return JOptionPane.showInputDialog(parent, message);
     }
 
@@ -286,23 +317,20 @@ class CustomDialog {
         UIManager.put("OptionPane.background", bgColor);
         UIManager.put("Panel.background", bgColor);
         UIManager.put("OptionPane.messageForeground", fgColor);
-        UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 14));
         JOptionPane.showMessageDialog(parent, message);
+    }
+
+    public static void showError(Component parent, String message) {
+        UIManager.put("OptionPane.background", bgColor);
+        UIManager.put("Panel.background", bgColor);
+        UIManager.put("OptionPane.messageForeground", Color.RED);
+        JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     public static int showConfirm(Component parent, String message, String title) {
         UIManager.put("OptionPane.background", bgColor);
         UIManager.put("Panel.background", bgColor);
         UIManager.put("OptionPane.messageForeground", fgColor);
-        UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 14));
         return JOptionPane.showConfirmDialog(parent, message, title, JOptionPane.YES_NO_OPTION);
-    }
-
-    public static void showError(Component parent, String message) {
-        UIManager.put("OptionPane.background", new Color(60, 30, 30));
-        UIManager.put("Panel.background", new Color(60, 30, 30));
-        UIManager.put("OptionPane.messageForeground", Color.WHITE);
-        UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 14));
-        JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 }
