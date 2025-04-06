@@ -4,6 +4,11 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.time.LocalDate;
+import org.jfree.chart.*;
+import org.jfree.chart.plot.PiePlot;
+import org.jfree.data.general.DefaultPieDataset;
+
+
 
 public class PayrollManagementSystem {
     private JFrame frame;
@@ -50,6 +55,9 @@ public class PayrollManagementSystem {
         attendanceBtn = createStyledButton("Mark Attendance");
         JButton viewAttendanceBtn = createStyledButton("Visualize Attendance");
         addToolTip(viewAttendanceBtn, "View monthly attendance record");
+        JButton salaryChartBtn = createStyledButton("Salary Pie Chart");
+        addToolTip(salaryChartBtn, "Visualize salary distribution");
+
 
 
         addToolTip(addEmployeeBtn, "Add a new employee");
@@ -71,6 +79,7 @@ public class PayrollManagementSystem {
         panel.add(clearBtn);
         panel.add(attendanceBtn);
         panel.add(viewAttendanceBtn);
+        panel.add(salaryChartBtn);
         panel.add(exitBtn);
         
 
@@ -89,6 +98,7 @@ public class PayrollManagementSystem {
         deleteBtn.addActionListener(e -> deleteEmployee());
         attendanceBtn.addActionListener(e -> markAttendance());
         viewAttendanceBtn.addActionListener(e -> viewAttendance());
+        salaryChartBtn.addActionListener(e -> viewSalaryDistribution());
         clearBtn.addActionListener(e -> CustomDialog.showMessage(frame, "No input fields to clear."));
         exitBtn.addActionListener(e -> {
             int confirm = CustomDialog.showConfirm(frame, "Are you sure you want to exit?", "Exit Confirmation");
@@ -274,6 +284,35 @@ public class PayrollManagementSystem {
             CustomDialog.showError(frame, "Error Deleting Employee\n" + e.getMessage());
         }
     }
+
+    private void viewSalaryDistribution() {
+        try {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT name, salary FROM employees");
+    
+            DefaultPieDataset dataset = new DefaultPieDataset();
+            while (rs.next()) {
+                String name = rs.getString("name");
+                double salary = rs.getDouble("salary");
+                dataset.setValue(name, salary);
+            }
+    
+            JFreeChart chart = ChartFactory.createPieChart(
+                    "Salary Distribution", dataset, true, true, false);
+            PiePlot plot = (PiePlot) chart.getPlot();
+            plot.setSectionOutlinesVisible(false);
+            plot.setBackgroundPaint(Color.white);
+            plot.setLabelFont(new Font("Segoe UI", Font.PLAIN, 12));
+    
+            ChartPanel chartPanel = new ChartPanel(chart);
+            chartPanel.setPreferredSize(new Dimension(600, 400));
+            JOptionPane.showMessageDialog(frame, chartPanel, "Salary Distribution", JOptionPane.PLAIN_MESSAGE);
+    
+        } catch (Exception e) {
+            CustomDialog.showError(frame, "Error generating chart\n" + e.getMessage());
+        }
+    }
+    
 
     private void markAttendance() {
         try {
