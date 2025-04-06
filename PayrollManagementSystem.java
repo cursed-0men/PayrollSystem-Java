@@ -48,6 +48,9 @@ public class PayrollManagementSystem {
         clearBtn = createStyledButton("Clear All Fields");
         exitBtn = createStyledButton("Exit");
         attendanceBtn = createStyledButton("Mark Attendance");
+        JButton viewAttendanceBtn = createStyledButton("Visualize Attendance");
+        addToolTip(viewAttendanceBtn, "View monthly attendance record");
+
 
         addToolTip(addEmployeeBtn, "Add a new employee");
         addToolTip(viewEmployeesBtn, "View all employees");
@@ -66,8 +69,11 @@ public class PayrollManagementSystem {
         panel.add(searchBtn);
         panel.add(deleteBtn);
         panel.add(clearBtn);
-        panel.add(exitBtn);
         panel.add(attendanceBtn);
+        panel.add(viewAttendanceBtn);
+        panel.add(exitBtn);
+        
+
 
         frame.add(headerPanel, BorderLayout.NORTH);
         frame.add(panel, BorderLayout.CENTER);
@@ -82,6 +88,7 @@ public class PayrollManagementSystem {
         searchBtn.addActionListener(e -> searchEmployee());
         deleteBtn.addActionListener(e -> deleteEmployee());
         attendanceBtn.addActionListener(e -> markAttendance());
+        viewAttendanceBtn.addActionListener(e -> viewAttendance());
         clearBtn.addActionListener(e -> CustomDialog.showMessage(frame, "No input fields to clear."));
         exitBtn.addActionListener(e -> {
             int confirm = CustomDialog.showConfirm(frame, "Are you sure you want to exit?", "Exit Confirmation");
@@ -293,6 +300,36 @@ public class PayrollManagementSystem {
             CustomDialog.showError(frame, "Error Marking Attendance\n" + e.getMessage());
         }
     }
+
+    private void viewAttendance() {
+        try {
+            String idStr = CustomDialog.showInput(frame, "Enter Employee ID:");
+            int empId = Integer.parseInt(idStr);
+    
+            String sql = "SELECT DATE_FORMAT(date, '%Y-%m') as month, COUNT(*) as present_days " +
+                         "FROM attendance WHERE employee_id=? GROUP BY month ORDER BY month DESC";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, empId);
+            ResultSet rs = ps.executeQuery();
+    
+            DefaultTableModel model = new DefaultTableModel(new Object[]{"Month", "Days Present"}, 0);
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                    rs.getString("month"),
+                    rs.getInt("present_days")
+                });
+            }
+    
+            JTable table = new JTable(model);
+            JScrollPane scrollPane = new JScrollPane(table);
+            scrollPane.setPreferredSize(new Dimension(500, 200));
+    
+            JOptionPane.showMessageDialog(frame, scrollPane, "Monthly Attendance", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            CustomDialog.showError(frame, "Error Viewing Attendance\n" + e.getMessage());
+        }
+    }
+    
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(PayrollManagementSystem::new);
