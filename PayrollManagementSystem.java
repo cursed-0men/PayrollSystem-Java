@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
@@ -15,9 +17,8 @@ public class PayrollManagementSystem {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
-        // Gradient header
+        // Gradient header panel
         headerPanel = new JPanel() {
-            @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g;
@@ -33,10 +34,10 @@ public class PayrollManagementSystem {
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel);
 
-        // Button panel
+        // Panel with buttons
         panel = new JPanel(new GridLayout(8, 1, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
-        panel.setBackground(Color.DARK_GRAY);
+        panel.setBackground(new Color(45, 45, 45)); // Dark background
 
         addEmployeeBtn = createStyledButton("Add Employee");
         viewEmployeesBtn = createStyledButton("View Employees");
@@ -47,15 +48,17 @@ public class PayrollManagementSystem {
         clearBtn = createStyledButton("Clear All Fields");
         exitBtn = createStyledButton("Exit");
 
+        // Tooltips
         addToolTip(addEmployeeBtn, "Add a new employee");
         addToolTip(viewEmployeesBtn, "View all employees");
-        addToolTip(calculateSalaryBtn, "Calculate employee's net salary");
-        addToolTip(updateSalaryBtn, "Update employee's salary components");
+        addToolTip(calculateSalaryBtn, "Calculate net salary");
+        addToolTip(updateSalaryBtn, "Update salary components");
         addToolTip(searchBtn, "Search employee by ID");
-        addToolTip(deleteBtn, "Delete employee from database");
-        addToolTip(clearBtn, "Clear inputs (not applicable in dialog-based UI)");
-        addToolTip(exitBtn, "Close the application");
+        addToolTip(deleteBtn, "Delete employee by ID");
+        addToolTip(clearBtn, "Clear inputs (not applicable)");
+        addToolTip(exitBtn, "Exit application");
 
+        // Add buttons to panel
         panel.add(addEmployeeBtn);
         panel.add(viewEmployeesBtn);
         panel.add(calculateSalaryBtn);
@@ -71,35 +74,35 @@ public class PayrollManagementSystem {
 
         connectDatabase();
 
-        // Event Listeners
+        // Button Actions
         addEmployeeBtn.addActionListener(e -> addEmployee());
         viewEmployeesBtn.addActionListener(e -> viewEmployees());
         calculateSalaryBtn.addActionListener(e -> calculateSalary());
         updateSalaryBtn.addActionListener(e -> updateSalary());
         searchBtn.addActionListener(e -> searchEmployee());
         deleteBtn.addActionListener(e -> deleteEmployee());
-        clearBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "No fields to clear in this mode."));
+        clearBtn.addActionListener(e -> JOptionPane.showMessageDialog(frame, "No input fields to clear."));
         exitBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(frame, "Are you sure you want to exit?", "Confirm Exit", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(frame, "Are you sure you want to exit?", "Exit Confirmation", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) System.exit(0);
         });
     }
 
     private JButton createStyledButton(String text) {
         JButton button = new JButton(text);
-        button.setBackground(new Color(0, 120, 215));
+        button.setBackground(new Color(30, 136, 229)); // Blue shade
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Arial", Font.BOLD, 14));
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(new Color(30, 144, 255));
-            }
 
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(new Color(0, 120, 215));
+        button.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(50, 158, 255));
+            }
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(new Color(30, 136, 229));
             }
         });
         return button;
@@ -111,169 +114,177 @@ public class PayrollManagementSystem {
 
     private void connectDatabase() {
         try {
-            conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/payroll?useSSL=false&allowPublicKeyRetrieval=true",
-                "root", "Qwerty@123"
-            );
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/payroll?useSSL=false", "root", "Qwerty@123");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Database Connection Failed!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Database connection failed!", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void addEmployee() {
-        String name = JOptionPane.showInputDialog("Enter Employee Name:");
-        if (name == null || name.trim().isEmpty()) return;
-
-        String payLevelInput = JOptionPane.showInputDialog("Enter Pay Level (1-10):");
-        if (payLevelInput == null || payLevelInput.trim().isEmpty()) return;
-
-        String salaryInput = JOptionPane.showInputDialog("Enter Initial Salary:");
-        if (salaryInput == null || salaryInput.trim().isEmpty()) salaryInput = "0.0";
-
         try {
-            int payLevel = Integer.parseInt(payLevelInput.trim());
-            double salary = Double.parseDouble(salaryInput.trim());
+            String name = prompt("Enter Employee Name:");
+            String payLevelInput = prompt("Enter Pay Level (1-10):");
+            String salaryInput = prompt("Enter Initial Salary:");
+
+            int payLevel = Integer.parseInt(payLevelInput);
+            double salary = Double.parseDouble(salaryInput);
 
             PreparedStatement ps = conn.prepareStatement(
                 "INSERT INTO employees (name, pay_level, salary, da_percentage, hra_percentage, other_allowances, deductions) " +
                 "VALUES (?, ?, ?, 38.0, 24.0, 0.0, 0.0)"
             );
-            ps.setString(1, name.trim());
+            ps.setString(1, name);
             ps.setInt(2, payLevel);
             ps.setDouble(3, salary);
             ps.executeUpdate();
-            JOptionPane.showMessageDialog(frame, "Employee Added Successfully!");
-        } catch (NumberFormatException ne) {
-            JOptionPane.showMessageDialog(frame, "Invalid number input!", "Input Error", JOptionPane.ERROR_MESSAGE);
+
+            JOptionPane.showMessageDialog(frame, "Employee added successfully.");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Error Adding Employee!\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error Adding Employee", e);
         }
     }
 
     private void viewEmployees() {
-        try {
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM employees");
+    try {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT * FROM employees");
 
-            StringBuilder employees = new StringBuilder("ID | Name | Pay Level | DA% | HRA% | Allowances | Deductions\n");
-            while (rs.next()) {
-                employees.append(rs.getInt("id")).append(" | ")
-                         .append(rs.getString("name")).append(" | ")
-                         .append(rs.getInt("pay_level")).append(" | ")
-                         .append(rs.getDouble("da_percentage")).append("% | ")
-                         .append(rs.getDouble("hra_percentage")).append("% | ")
-                         .append(rs.getDouble("other_allowances")).append(" | ")
-                         .append(rs.getDouble("deductions")).append("\n");
-            }
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columnCount = metaData.getColumnCount();
 
-            JOptionPane.showMessageDialog(frame, employees.toString());
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Error Fetching Employees!", "Error", JOptionPane.ERROR_MESSAGE);
+        // Column names
+        String[] columnNames = new String[columnCount];
+        for (int i = 1; i <= columnCount; i++) {
+            columnNames[i - 1] = metaData.getColumnName(i);
         }
+
+        // Data
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+        while (rs.next()) {
+            Object[] row = new Object[columnCount];
+            for (int i = 1; i <= columnCount; i++) {
+                row[i - 1] = rs.getObject(i);
+            }
+            model.addRow(row);
+        }
+
+        JTable table = new JTable(model);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setPreferredSize(new Dimension(500, 300));
+
+        JOptionPane.showMessageDialog(frame, scrollPane, "Employee Records", JOptionPane.INFORMATION_MESSAGE);
+    } catch (Exception e) {
+        showError("Error Fetching Employees", e);
     }
+}
 
+    
+        
     private void calculateSalary() {
-        String id = JOptionPane.showInputDialog("Enter Employee ID:");
-        if (id == null || id.trim().isEmpty()) return;
-
         try {
+            int id = Integer.parseInt(prompt("Enter Employee ID:"));
             PreparedStatement ps = conn.prepareStatement(
                 "SELECT salary, da_percentage, hra_percentage, other_allowances, deductions FROM employees WHERE id=?"
             );
-            ps.setInt(1, Integer.parseInt(id));
+            ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                double basicSalary = rs.getDouble("salary");
-                double da = (rs.getDouble("da_percentage") / 100) * basicSalary;
-                double hra = (rs.getDouble("hra_percentage") / 100) * basicSalary;
-                double otherAllowances = rs.getDouble("other_allowances");
+                double basic = rs.getDouble("salary");
+                double da = (rs.getDouble("da_percentage") / 100) * basic;
+                double hra = (rs.getDouble("hra_percentage") / 100) * basic;
+                double others = rs.getDouble("other_allowances");
                 double deductions = rs.getDouble("deductions");
-                double netSalary = basicSalary + da + hra + otherAllowances - deductions;
+                double net = basic + da + hra + others - deductions;
 
-                JOptionPane.showMessageDialog(frame, "Net Salary: ₹" + netSalary);
+                JOptionPane.showMessageDialog(frame, String.format("Net Salary: ₹%.2f", net));
             } else {
-                JOptionPane.showMessageDialog(frame, "Employee Not Found!", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Employee not found.");
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Error Calculating Salary!\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error Calculating Salary", e);
         }
     }
 
     private void updateSalary() {
-        String id = JOptionPane.showInputDialog("Enter Employee ID to Update:");
-        if (id == null || id.trim().isEmpty()) return;
-
-        String newPayLevel = JOptionPane.showInputDialog("Enter New Pay Level:");
-        String newDA = JOptionPane.showInputDialog("Enter New DA%:");
-        String newHRA = JOptionPane.showInputDialog("Enter New HRA%:");
-        String newAllowances = JOptionPane.showInputDialog("Enter Other Allowances:");
-        String newDeductions = JOptionPane.showInputDialog("Enter New Deductions:");
-
         try {
+            int id = Integer.parseInt(prompt("Enter Employee ID to update:"));
+            int level = Integer.parseInt(prompt("Enter new Pay Level:"));
+            double da = Double.parseDouble(prompt("Enter new DA%:"));
+            double hra = Double.parseDouble(prompt("Enter new HRA%:"));
+            double allowances = Double.parseDouble(prompt("Enter Other Allowances:"));
+            double deductions = Double.parseDouble(prompt("Enter New Deductions:"));
+
             PreparedStatement ps = conn.prepareStatement(
                 "UPDATE employees SET pay_level=?, da_percentage=?, hra_percentage=?, other_allowances=?, deductions=? WHERE id=?"
             );
-            ps.setInt(1, Integer.parseInt(newPayLevel));
-            ps.setDouble(2, Double.parseDouble(newDA));
-            ps.setDouble(3, Double.parseDouble(newHRA));
-            ps.setDouble(4, Double.parseDouble(newAllowances));
-            ps.setDouble(5, Double.parseDouble(newDeductions));
-            ps.setInt(6, Integer.parseInt(id));
+            ps.setInt(1, level);
+            ps.setDouble(2, da);
+            ps.setDouble(3, hra);
+            ps.setDouble(4, allowances);
+            ps.setDouble(5, deductions);
+            ps.setInt(6, id);
+
             ps.executeUpdate();
-            JOptionPane.showMessageDialog(frame, "Employee Salary Updated Successfully!");
+            JOptionPane.showMessageDialog(frame, "Salary updated successfully.");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Error Updating Salary!", "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error Updating Salary", e);
         }
     }
 
     private void searchEmployee() {
-        String id = JOptionPane.showInputDialog("Enter Employee ID:");
-        if (id == null || id.trim().isEmpty()) return;
-
         try {
+            int id = Integer.parseInt(prompt("Enter Employee ID:"));
             PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees WHERE id=?");
-            ps.setInt(1, Integer.parseInt(id));
+            ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
                 String info = "Name: " + rs.getString("name") +
-                              "\nPay Level: " + rs.getInt("pay_level") +
-                              "\nDA: " + rs.getDouble("da_percentage") + "%" +
-                              "\nHRA: " + rs.getDouble("hra_percentage") + "%" +
-                              "\nOther Allowances: " + rs.getDouble("other_allowances") +
-                              "\nDeductions: " + rs.getDouble("deductions");
+                        "\nPay Level: " + rs.getInt("pay_level") +
+                        "\nDA: " + rs.getDouble("da_percentage") + "%" +
+                        "\nHRA: " + rs.getDouble("hra_percentage") + "%" +
+                        "\nAllowances: " + rs.getDouble("other_allowances") +
+                        "\nDeductions: " + rs.getDouble("deductions");
                 JOptionPane.showMessageDialog(frame, info);
             } else {
-                JOptionPane.showMessageDialog(frame, "Employee Not Found!", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Employee not found.");
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Error Searching Employee!", "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error Searching Employee", e);
         }
     }
 
     private void deleteEmployee() {
-        String id = JOptionPane.showInputDialog("Enter Employee ID to Delete:");
-        if (id == null || id.trim().isEmpty()) return;
-
         try {
-            int confirm = JOptionPane.showConfirmDialog(frame, "Are you sure to delete employee ID " + id + "?", "Confirm", JOptionPane.YES_NO_OPTION);
+            int id = Integer.parseInt(prompt("Enter Employee ID to delete:"));
+            int confirm = JOptionPane.showConfirmDialog(frame, "Delete employee ID " + id + "?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 PreparedStatement ps = conn.prepareStatement("DELETE FROM employees WHERE id=?");
-                ps.setInt(1, Integer.parseInt(id));
+                ps.setInt(1, id);
                 int rows = ps.executeUpdate();
                 if (rows > 0) {
-                    JOptionPane.showMessageDialog(frame, "Employee Deleted Successfully!");
+                    JOptionPane.showMessageDialog(frame, "Employee deleted.");
                 } else {
-                    JOptionPane.showMessageDialog(frame, "Employee Not Found!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(frame, "Employee not found.");
                 }
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Error Deleting Employee!", "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error Deleting Employee", e);
         }
     }
 
+    private String prompt(String message) {
+        String input = JOptionPane.showInputDialog(message);
+        if (input == null || input.trim().isEmpty()) throw new IllegalArgumentException("Input cannot be empty");
+        return input.trim();
+    }
+
+    private void showError(String title, Exception e) {
+        JOptionPane.showMessageDialog(frame, title + ":\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
     public static void main(String[] args) {
-        new PayrollManagementSystem();
+        SwingUtilities.invokeLater(PayrollManagementSystem::new);
     }
 }
