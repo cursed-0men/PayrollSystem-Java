@@ -142,7 +142,7 @@ public class PayrollManagementSystem {
         try {
             String name = CustomDialog.showInput(frame, "Enter Employee Name:");
             int payLevel = Integer.parseInt(CustomDialog.showInput(frame, "Enter Pay Level (1-10):"));
-            double salary = Double.parseDouble(CustomDialog.showInput(frame, "Enter Initial Salary:"));
+            double salary = Double.parseDouble(CustomDialog.showInput(frame, "Enter Initial Salary(Annual):"));
 
             PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO employees (name, pay_level, salary, da_percentage, hra_percentage, other_allowances, deductions) " +
