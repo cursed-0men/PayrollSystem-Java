@@ -56,6 +56,11 @@ CREATE TABLE attendance (
     date DATE,
     FOREIGN KEY (employee_id) REFERENCES employees(id)
 );
+
+CREATE TABLE pay_levels (
+    level INT NOT NULL PRIMARY KEY,
+    basic_salary DECIMAL(10, 2)
+);
 ```
 ---
 ## 🧩 Custom Dialog Utility
