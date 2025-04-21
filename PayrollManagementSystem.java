@@ -244,27 +244,54 @@ public class PayrollManagementSystem {
     }
 
     private void searchEmployee() {
-        try {
-            int id = Integer.parseInt(CustomDialog.showInput(frame, "Enter Employee ID:"));
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees WHERE id=?");
-            ps.setInt(1, id);
-            ResultSet rs = ps.executeQuery();
-
+        // Use CustomDialog to prompt the user for the Employee ID
+        String empId = CustomDialog.showInput(frame, "Enter Employee ID:");
+        
+        // Validate the input
+        if (empId == null || empId.isEmpty()) {
+            CustomDialog.showMessage(frame, "Please enter an Employee ID.");
+            return;
+        }
+    
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/payroll?useSSL=false", "root", "Qwerty@123")) {
+            String sql = "SELECT * FROM employees WHERE id = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, empId);
+            ResultSet rs = stmt.executeQuery();
+    
             if (rs.next()) {
-                String info = "Name: " + rs.getString("name") +
-                        "\nPay Level: " + rs.getInt("pay_level") +
-                        "\nDA: " + rs.getDouble("da_percentage") + "%" +
-                        "\nHRA: " + rs.getDouble("hra_percentage") + "%" +
-                        "\nAllowances: " + rs.getDouble("other_allowances") +
-                        "\nDeductions: " + rs.getDouble("deductions");
+                double basic = rs.getDouble("salary");
+                double da = (rs.getDouble("da_percentage") / 100.0) * basic;
+                double hra = (rs.getDouble("hra_percentage") / 100.0) * basic;
+                double others = rs.getDouble("other_allowances");
+                double deductions = rs.getDouble("deductions");
+                double net = basic + da + hra + others - deductions;
+    
+                String info = "Employee Details:\n"
+                        + "----------------------\n"
+                        + "Employee ID: " + rs.getString("id") + "\n"
+                        + "Name: " + rs.getString("name") + "\n"
+                        + "Pay Level: " + rs.getInt("pay_level") + "\n"
+                        + "Basic Salary: ₹" + String.format("%.2f", basic) + "\n"
+                        + "DA: " + rs.getDouble("da_percentage") + "% (₹" + String.format("%.2f", da) + ")\n"
+                        + "HRA: " + rs.getDouble("hra_percentage") + "% (₹" + String.format("%.2f", hra) + ")\n"
+                        + "Other Allowances: ₹" + String.format("%.2f", others) + "\n"
+                        + "Deductions: ₹" + String.format("%.2f", deductions) + "\n"
+                        + "----------------------\n"
+                        + "Net Salary: ₹" + String.format("%.2f", net);
+    
                 CustomDialog.showMessage(frame, info);
             } else {
                 CustomDialog.showMessage(frame, "Employee not found.");
             }
-        } catch (Exception e) {
-            CustomDialog.showError(frame, "Error Searching Employee\n" + e.getMessage());
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+            CustomDialog.showMessage(frame, "Error: " + e.getMessage());
         }
     }
+    
+    
 
     private void deleteEmployee() {
         try {
